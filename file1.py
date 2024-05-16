@@ -12,7 +12,7 @@ __license__ = "MIT"
 # ZQ Month Year
 def ProductCodeTwoNumbers(month, year):
     my_dict = {
-    1: 'F'
+    1: 'F',
     2: 'G',
     3: 'H',
     4: 'J',
@@ -25,10 +25,7 @@ def ProductCodeTwoNumbers(month, year):
     11: 'X',
     12: 'Z'
 }
-    return()
-
-
-
+    return("ZQ" + my_dict[month] + str(year))
 
 
 def main():
