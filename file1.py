@@ -11,8 +11,8 @@ __license__ = "MIT"
 import pandas as pd 
 import openpyxl
 
-# Here 0th column will be extracted 
-df = pd.read_excel("/Users/jackkidney/Documents/fedwatch/fedtool/data/fomc_data.xlsx", index_col = 0)  
+# import fomc data as a list
+FOMCdf = pd.read_excel("/Users/jackkidney/Documents/fedwatch/fedtool/data/fomc_data.xlsx", index_col = 0)  
 
 
 # Takes in the a month and year as numerics and spits out a proper product code of
@@ -40,7 +40,8 @@ def NearestMeeting(CurrentDate, prnt=False):
         raise TypeError("Date must be in list = [month, day, year] format")
     if len(CurrentDate) != 3:
         raise ValueError("Date list must have size 3")
-    
+    FOMCdf
+
     pass
     
 
