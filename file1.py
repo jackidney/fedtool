@@ -16,6 +16,7 @@ from dateutil.relativedelta import relativedelta
 FOMCdf = pd.read_excel("/Users/jackkidney/Documents/fedwatch/fedtool/data/fomc_data.xlsx", index_col = None)  
 #FOMCdf['FOMCDate'] = pd.to_datetime(FOMCdf['FOMCDate'])
 
+today = datetime.date(2024, 5, 17)
 
 # Takes in the a month and year as numerics and spits out a proper product code of
 # ZQ Month Year
@@ -46,6 +47,8 @@ def NearestNonMeetingMonth(CurrentDate, prnt=False):
             return (CurrentDate+relativedelta(months=1))
         # Scenario 2
     return (CurrentDate+relativedelta(months=2))
+
+
 
 
     
