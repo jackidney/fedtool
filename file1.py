@@ -48,7 +48,28 @@ def NearestNonMeetingMonth(CurrentDate, prnt=False):
         # Scenario 2
     return (CurrentDate+relativedelta(months=2))
 
-
+def calculate(ReferenceDate = today, NumberOfMeetings = 2):
+    data = {
+    'Date': [],
+    'START': [],
+    'AVERAGE': [],
+    'END': [],
+    'Days': [],
+    '% Days': [],
+    'Price': [],
+    'Implied Rate': [],
+    'Monthly Change': [],
+    '# of 25bp Hikes': [],
+    '# Hikes Breakdown': []
+}
+    saved = datetime.date(2100,1,1)
+    for row in FOMCdf['FOMCDate']:
+        # Find the least row where FOMCDate is greater than or equal to CurrentDate
+        if ((row > ReferenceDate) & (row < saved)):
+            saved = row
+    print(saved)
+    
+    pass
 
 
     
