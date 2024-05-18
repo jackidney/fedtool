@@ -13,7 +13,8 @@ import datetime
 from dateutil.relativedelta import relativedelta
 
 # import fomc data as a list
-FOMCdf = pd.read_excel("/Users/jackkidney/Documents/fedwatch/fedtool/data/fomc_data.xlsx", index_col = None)  
+FOMCdf = pd.read_excel("/Users/jackkidney/Documents/fedwatch/fedtool/data/fomc_data.xlsx", index_col = None)
+contracts = pd.read_excel("/Users/jackkidney/Documents/fedwatch/fedtool/data/contracts.xlsx", index_col = None) 
 #FOMCdf['FOMCDate'] = pd.to_datetime(FOMCdf['FOMCDate'])
 
 today = datetime.date(2024, 5, 17)
@@ -24,7 +25,7 @@ def ProductCodeTwoNumbers(month, year):
     my_dict = {
     1: 'F', 2: 'G', 3: 'H', 4: 'J', 5: 'K', 6: 'M', 7: 'N', 8: 'Q', 9: 'U', 10: 'V', 11: 'X', 12: 'Z'
 }
-    return("ZQ" + my_dict[month] + str(year))
+    return("ZQ" + my_dict[month] + str(year)[-2:])
 
 
 # NearestNonMeetingMonth takes in a current date and finds the nearest upcoming month with no FOMC meeting
@@ -76,7 +77,6 @@ def calculate(ReferenceDate = today, NumberOfMeetings = 2):
     print(rows_list)
     print(max(rows_list))
 
-    
     position = datetime.date(today.year, today.month, 1)
     lst = list()
     while(position < max(rows_list)):
@@ -95,8 +95,25 @@ def calculate(ReferenceDate = today, NumberOfMeetings = 2):
             
                 data = data.append({'Date': date, 'START': start, 'AVERAGE': average, 'END': end}, ignore_index=True)
     print(data)
+
+    uniques = data['Date'].unique()
+
+    print(contracts)
+
+    for iteration in uniques:
+        #print(ProductCodeTwoNumbers(iteration.month, iteration.year))
+        val = contracts.loc[contracts['CONTRACT'] == ProductCodeTwoNumbers(iteration.month, iteration.year), 'LAST'].values[0]
+        print(val)
+        data.loc[((data['Date'] == iteration) & (data['AVERAGE'] == 1)), "Price"] = val
     
+    print(data)
+
+    
+
+
     def FillDays(frame):
+        pass
+        
         
 
     #for current in lst:
