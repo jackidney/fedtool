@@ -13,6 +13,8 @@ import datetime
 from dateutil.relativedelta import relativedelta
 import calendar
 import numpy as np
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 # import fomc data as a list
 FOMCdf = pd.read_excel("/Users/jackkidney/Documents/fedwatch/fedtool/data/fomc_data.xlsx", index_col = None)
@@ -41,40 +43,33 @@ def toDT(input):
     seconds_since_epoch = (input - unix_epoch) / one_second
     return(datetime.datetime.utcfromtimestamp(seconds_since_epoch).date())
 
-
-
 def NearestNonMeetingMonth2(CurrentDate = today, length = 8):
-    FOMCdf['FOMCDate'] = FOMCdf['FOMCDate'].apply(toDT)
-    FOMCdf = FOMCdf[FOMCdf['FOMCDate'] > today]
-    FOMCdf['FOMCDate'] = FOMCdf['FOMCDate'].apply(lambda x: x.replace(day=1))
-    
-    print(FOMCdf)
+    frame = FOMCdf['FOMCDate']
+    frame = frame.apply(toDT)
+    list1 = frame[frame > CurrentDate]
+    list1 = list1.apply(lambda x: x.replace(day=1))
 
-    list1 = list1
-
-    print(list1)
-
-    sdate = datetime.date(today.year, today.month, 1)
-    edate = sdate + relativedelta(months = length)
+    sdate = datetime.date(CurrentDate.year, CurrentDate.month + 1, 1)
     list2 = pd.date_range(sdate, periods = length, freq='MS')
 
-    comparison = list2
-    
-    min()
+    output = pd.Series(list2).loc[~pd.Series(list2).isin(list1)].min()
+    output = output.to_pydatetime()
+    return(output)
 
-    print(list2)
-    
 
-def NearestNonMeetingMonth(CurrentDate, prnt=False):
-    if not isinstance(CurrentDate, datetime.date):
-        raise TypeError("CurrentDate must be a datetime object")
-    for row in FOMCdf['FOMCDate']:
-        # Scenario 1
-        if ((row.year == CurrentDate.year) & 
-            (row.month == CurrentDate.month)):
-            return (CurrentDate+relativedelta(months=1))
-        # Scenario 2
-    return (CurrentDate+relativedelta(months=2))
+# def NearestNonMeetingMonth2(CurrentDate = today, length = 8):
+#     frame = FOMCdf['FOMCDate']
+#     frame['FOMCDate'] = frame['FOMCDate'].apply(toDT)
+#     list1 = frame[frame['FOMCDate'] > today]['FOMCDate']
+#     list1 = list1.apply(lambda x: x.replace(day=1))
+
+#     sdate = datetime.date(CurrentDate.year, CurrentDate.month + 1, 1)
+#     list2 = pd.date_range(sdate, periods = length, freq='MS')
+
+#     output = pd.Series(list2).loc[~pd.Series(list2).isin(list1)].min()
+#     output = output.to_pydatetime()
+#     return(output)
+
 
 def calculate(ReferenceDate = today, NumberOfMeetings = 5):
     data = pd.DataFrame(columns=[
@@ -98,11 +93,8 @@ def calculate(ReferenceDate = today, NumberOfMeetings = 5):
         if (row >= ReferenceDate) and (row < saved):
             saved = row
             saved_index = index
-    print(row, saved_index)
     # Now get a list of the rows in FOMCdf['FOMCDate'] for saved_index to saved_index-NumberOfMeetings
     rows_list = FOMCdf['FOMCDate'].iloc[(saved_index - NumberOfMeetings + 1):saved_index + 1].tolist()
-    print(rows_list)
-    print(max(rows_list))
 
     position = datetime.date(today.year, today.month, 1)
     lst = list()
@@ -120,11 +112,10 @@ def calculate(ReferenceDate = today, NumberOfMeetings = 5):
                 data = data.append({'Date': date, 'START': start, 'AVERAGE': average, 'END': end}, ignore_index=True)
     uniques = data['Date'].unique()
 
-    print(contracts)
+    #print(contracts)
 
     for iteration in uniques:
         val = contracts.loc[contracts['CONTRACT'] == ProductCodeTwoNumbers(iteration.month, iteration.year), 'LAST'].values[0]
-        print(val)
         data.loc[((data['Date'] == iteration) & (data['AVERAGE'] == 1)), "Price"] = val
     
     # Now add day and % values
@@ -142,37 +133,51 @@ def calculate(ReferenceDate = today, NumberOfMeetings = 5):
         data.loc[((data['Date'] == row_sterilized) & (data['START'] == 1)), "% Days"] = (start_days / calendar.monthrange(row.year, row.month)[1])
         data.loc[((data['Date'] == row_sterilized) & (data['END'] == 1)), "% Days"] = (end_days / calendar.monthrange(row.year, row.month)[1])
     
-    BasePosition = datetime.date(NearestNonMeetingMonth(today).year, NearestNonMeetingMonth(today).month, 1)
+    BasePosition = datetime.date(NearestNonMeetingMonth2(today).year, NearestNonMeetingMonth2(today).month, 1)
+
 
     # Extract Base Node Price, save.
     BasePrice = data.loc[(data['Date'] == BasePosition) & (data['AVERAGE'] == 1), "Price"]
-    print(BasePrice)
-    data.loc[((data['Date'] == BasePosition + relativedelta(months=1)) & (data['START'] == 1)), "Price"] = BasePrice
-    
-    
+
+    data.loc[((data['Date'] == BasePosition + relativedelta(months=1)) & (data['START'] == 1)), "Price"] = BasePrice.values[0]
+    data.loc[((data['Date'] == BasePosition - relativedelta(months=1)) & (data['END'] == 1)), "Price"] = BasePrice.values[0]
 
     print(data)
 
-
-    
-
-
-    def FillDays(frame):
+    def FFEREnd(date = datetime.date(2024, 9, 1)):
+        #Avg. FFER
+        AVGFFER = data.iloc(data['Date'] == date)
+        print(AVGFFER)
+        
+        value = data.iloc(data['Date'] == date)
+        data.iloc[(data['Date'] == date) & (data['END'] == 1), "Price"] = value
         pass
         
+    FFEREnd()
+    print(data)
+
+    #FFER End = [ (Avg. FFER) - (% days before meet.)*(FFER Start) ] / (% days after meet.)
+    #FFEREnd = [ data['Date']data['Date']
+
+
+    # loop = (data['Date'].values)
+    # for item in loop:
+    #     pass
+#data['Date' == item AND 
+        
+    
+def FillDays(frame):
+     
+    pass   
         
 
     #for current in lst:
-        
-
-    
-    
     
 
 def main():
     """ Main entry point of the app """
     print("hello world")
-    NearestNonMeetingMonth2()
+    calculate()
 
 
 if __name__ == "__main__":
