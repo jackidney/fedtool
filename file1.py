@@ -295,20 +295,42 @@ def polish(data):
     print(data)
 
 def Generate(data):
-    import numpy as np
 
-    # Define the number of rows and columns
-    rows, cols = 6, 10
+    filtered_df = data.dropna(subset=['# Hikes Breakdown'])
+
+    # Convert the filtered DataFrame rows to a list
+    output = filtered_df[['Date', '# Hikes Breakdown']].to_dict('records')
+
+    # Remove entries where '# Hikes Breakdown' == (0, 0.0)
+    final = [entry for entry in output if entry['# Hikes Breakdown'] != (0, 0.0)]
+
+    print("Filtered Data:")
+    for entry in final:
+        print(entry)
+
+
+    # Define the dimensions of the array
+    rows, cols = len(final)+1, 17
 
     # Create the array with zeros
     array = np.zeros((rows, cols))
 
-    # Set the first row with incremented values starting from 0, increasing by 0.25
-    array[0] = np.arange(0, cols * 0.25, 0.25)
+    # Set the first row with values starting from -2.5 and incrementing by 0.25
+    array[0, 0] = -2.0
+    array[0, 1:] = np.arange(-1.75, 2.25, 0.25)
 
     print(array)
-    
 
+
+    # Go back and fix this so it works for both rate hiking and rate cutting
+    for i in range(0, len(final)):
+        print(final[i], i)
+        array[i+1, 8 + final[i]['# Hikes Breakdown'][0]] = abs(final[i]['# Hikes Breakdown'][1])
+        array[i+1, 9 + final[i]['# Hikes Breakdown'][0]] = 1-abs(final[i]['# Hikes Breakdown'][1])
+    
+    print(array)
+    return array
+        
 
 
 
@@ -322,7 +344,7 @@ def main():
     BackFill(NearestNonMeetingMonth2(today).date(), data)
     FrontFill(NearestNonMeetingMonth2(today).date(), data)
     polish(data)
-    Generate(data)
+    hikeprobs = Generate(data)
 
 
 if __name__ == "__main__":
