@@ -19,9 +19,9 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 # import fomc data as a list
 FOMCdf = pd.read_excel("/Users/jackkidney/Documents/fedwatch/fedtool/data/fomc_data.xlsx", index_col = None)
 contracts = pd.read_excel("/Users/jackkidney/Documents/fedwatch/fedtool/data/contracts.xlsx", index_col = None) 
-#FOMCdf['FOMCDate'] = pd.to_datetime(FOMCdf['FOMCDate'])
 
 today = datetime.date(2024, 5, 17)
+NumberOfMeetings = 5
 
 # Takes in the a month and year as numerics and spits out a proper product code of
 # ZQ Month Year
@@ -141,96 +141,188 @@ def calculate(ReferenceDate = today, NumberOfMeetings = 5):
 
     data.loc[((data['Date'] == BasePosition + relativedelta(months=1)) & (data['START'] == 1)), "Price"] = BasePrice.values[0]
     data.loc[((data['Date'] == BasePosition - relativedelta(months=1)) & (data['END'] == 1)), "Price"] = BasePrice.values[0]
-
     
-    #FFER End = [ (Avg. FFER) - (% days before meet.)*(FFER Start) ] / (% days after meet.)
-    def FFend(date):
-        # If it IS a meeting month, then the following should run
-        if (not(pd.isna(data.loc[(data['Date'] == date) & (data['START'] == 1), "% Days"].values))):
-            #Avg. FFER
-            FFavg = data.loc[(data['Date'] == date) & (data['AVERAGE'] == 1), "Price"].values
-            # %before
-            pbefore = data.loc[(data['Date'] == date) & (data['START'] == 1), "% Days"].values
-            # FF Start
-            FFstart = data.loc[(data['Date'] == date) & (data['START'] == 1), "Price"].values
-            # %after
-            pafter = data.loc[(data['Date'] == date) & (data['END'] == 1), "% Days"].values
-             #FFER End = [ (Avg. FFER) - (% days before meet.)*(FFER Start) ] / (% days after meet.)
-            result = (FFavg - (pbefore * FFstart)) /  pafter
-            data.loc[(data['Date'] == date) & (data['END'] == 1), "Price"] = result
-            print(FFavg, pbefore, FFstart, pafter)
-        
-        # Check if it is NOT a meeting month. If NOT a meeting month then TRUE, and the following statement should run.
-        if pd.isna(data.loc[(data['Date'] == date) & (data['START'] == 1), "% Days"].values):
-            raise("Meeting month error in call on FFend for " + date)
-        pass
+    print(data)
+    return(data)
 
-    #FFER Start = [ (Avg FFER) - (% days after meet.)*(FFER End) ] / (% days before meet.)
-    def FFstart(date):
-        # If it IS a meeting month, then the following should run
-        if (not(pd.isna(data.loc[(data['Date'] == date) & (data['END'] == 1), "% Days"].values))):
-            #Avg. FFER
-            FFavg = data.loc[(data['Date'] == date) & (data['AVERAGE'] == 1), "Price"].values
-            # %after
-            pafter = data.loc[(data['Date'] == date) & (data['END'] == 1), "% Days"].values
-            # FF end
-            FFend = data.loc[(data['Date'] == date) & (data['END'] == 1), "Price"].values
-            # %before
-            pbefore = data.loc[(data['Date'] == date) & (data['START'] == 1), "% Days"].values
-            #FFER Start = [ (Avg FFER) - (% days after meet.)*(FFER End) ] / (% days before meet.)
-            result = (FFavg - (pafter * FFend)) /  pbefore
-            data.loc[(data['Date'] == date) & (data['START'] == 1), "Price"] = result
-            print(FFavg, pbefore, FFstart, pafter)
-        
-        # Check if it is NOT a meeting month. If NOT a meeting month then TRUE, and the following statement should run.
-        if pd.isna(data.loc[(data['Date'] == date) & (data['END'] == 1), "% Days"].values):
-            raise("Meeting month error in call on FFstart for " + date)
-        pass
-    
+def BackFill(center, data):
+   
+    # Make center month fill in
+    AVG = data.loc[((data['Date'] == center) & (data["AVERAGE"] == 1)), "Price"].values[0]
+    print(AVG)
+    # Set month end and month start price to average, since rate shouldn't 
+    # change at all from average during a non-meeting month
+    data.loc[((data['Date'] == center) & (data["START"] == 1)), "Price"] = AVG
+    data.loc[((data['Date'] == center) & (data["END"] == 1)), "Price"] = AVG
+
+
     loop = data["Date"].values
-    print(data)
-    def BackFill(center):
-        previous = center
-        while True:
-            current = previous - relativedelta(months=1)
-            if current not in loop:
-                break
-            if current in loop:
-                
-                print("current:", current)
-                print("previous:", previous)
-                print(pd.isna(data.loc[((data['Date'] == previous) & (data["END"] == 1)), "% Days"].values[0]))
-                # If previous month is NaN month (Meeting-free month)
-                if not(pd.isna(data.loc[((data['Date'] == previous) & (data["END"] == 1)), "% Days"].values[0])):
-                    #Set current month's FFend to previous month's FFavg
-                    previous_month_FFavg = data.loc[(data['Date'] == previous) & (data["AVERAGE"] == 1), "Price"].values[0]
-                    print(previous_month_FFavg)
+    previous = center
 
-                    data.loc[((data['Date'] == current) & (data["END"] == 1)), "Price"] = previous_month_FFavg
-                    FFstart(current)
+    while True:
+        current = previous - relativedelta(months=1)
+        if current not in loop:
+            break
+        if current in loop:
+            print("current:", current)
+            print("previous:", previous)
+            print(pd.isna(data.loc[((data['Date'] == previous) & (data["END"] == 1)), "% Days"].values[0]))
+            
 
-                if pd.isna(data.loc[((data['Date'] == previous) & (data["END"] == 1)), "% Days"].values[0]):
-                    print(previous, " is a non-meeting month")
+            if pd.isna(data.loc[((data['Date'] == current) & (data["END"] == 1)), "% Days"].values[0]):
+                print("current month ", current, " is a non-meeting month")
+                # Find the month's average
+                AVG = data.loc[((data['Date'] == current) & (data["AVERAGE"] == 1)), "Price"].values[0]
+                print(AVG)
+                # Set month end and month start price to average, since rate shouldn't 
+                # change at all from average during a non-meeting month
+                data.loc[((data['Date'] == current) & (data["START"] == 1)), "Price"] = AVG
+                data.loc[((data['Date'] == current) & (data["END"] == 1)), "Price"] = AVG
+            
 
-            #now change previous month for next loop iteration 
-            previous = previous - relativedelta(months=1)
-    
-    BackFill(NearestNonMeetingMonth2(today).date())
-    print(data)
+            #NEW LOGIC: If current month is a fed meeting month.
+                # Fill in the month end with the next month's beginning.
+                # Then run FFStart to get the FF at the start of the month using the Average and month end FF
+            if not(pd.isna(data.loc[((data['Date'] == current) & (data["END"] == 1)), "% Days"].values[0])):
+                print("Current month", current, " is a meeting month")
+                #Set current month's FFend to previous month's FF start
+                previous_month_FFstart = data.loc[(data['Date'] == previous) & (data["START"] == 1), "Price"].values[0]
+                print(previous_month_FFstart)
+                data.loc[((data['Date'] == current) & (data["END"] == 1)), "Price"] = previous_month_FFstart
 
+                #Now run FFstart to calculate the month's beginning using the formula
+                FFstart(current, data)
+            
+        previous = previous - relativedelta(months=1)
+        print(data)
+
+def FrontFill(center, data):
+
+    loop = data["Date"].values
+    previous = center
+
+    while True:
+        current = previous + relativedelta(months=1)
+        if current not in loop:
+            break
+        if current in loop:
+            print("current:", current)
+            print("previous:", previous)
+
+            # If current month is a non-meeting month, then fill in the month end and month start with month average
+            if pd.isna(data.loc[((data['Date'] == current) & (data["END"] == 1)), "% Days"].values[0]):
+                print("current month ", current, " is a non-meeting month")
+                # Find the month's average
+                AVG = data.loc[((data['Date'] == current) & (data["AVERAGE"] == 1)), "Price"].values[0]
+                print(AVG)
+                # Set month end and month start price to average, since rate shouldn't 
+                # change at all from average during a non-meeting month
+                data.loc[((data['Date'] == current) & (data["START"] == 1)), "Price"] = AVG
+                data.loc[((data['Date'] == current) & (data["END"] == 1)), "Price"] = AVG
+            
+
+            #NEW LOGIC: If current month is a fed meeting month.
+                # Fill in the current month start with the last month's end.
+                # Then run FFend to get the FF at the end of the month using the Average and month start FF
+            if not(pd.isna(data.loc[((data['Date'] == current) & (data["END"] == 1)), "% Days"].values[0])):
+                print("Current month", current, " is a meeting month")
+                #Set current month's FFend to previous month's FF start
+                previous_month_FFend = data.loc[(data['Date'] == previous) & (data["END"] == 1), "Price"].values[0]
+                print(previous_month_FFend)
+                data.loc[((data['Date'] == current) & (data["START"] == 1)), "Price"] = previous_month_FFend
+
+                #Now run FFstart to calculate the month's beginning using the formula
+                FFend(current, data)
+            
+        previous = previous + relativedelta(months=1)
+        print(data)
+    #now change previous month for next loop iteration 
         
     
-def FillDays(frame):
-    pass   
-        
-
-    #for current in lst:
+#FFER End = [ (Avg. FFER) - (% days before meet.)*(FFER Start) ] / (% days after meet.)
+def FFend(date, data):
+    # If it IS a meeting month, then the following should run
+    if (not(pd.isna(data.loc[(data['Date'] == date) & (data['START'] == 1), "% Days"].values))):
+        #Avg. FFER
+        FFavg = data.loc[(data['Date'] == date) & (data['AVERAGE'] == 1), "Price"].values
+        # %before
+        pbefore = data.loc[(data['Date'] == date) & (data['START'] == 1), "% Days"].values
+        # FF Start
+        FFstart = data.loc[(data['Date'] == date) & (data['START'] == 1), "Price"].values
+        # %after
+        pafter = data.loc[(data['Date'] == date) & (data['END'] == 1), "% Days"].values
+            #FFER End = [ (Avg. FFER) - (% days before meet.)*(FFER Start) ] / (% days after meet.)
+        result = (FFavg - (pbefore * FFstart)) /  pafter
+        data.loc[(data['Date'] == date) & (data['END'] == 1), "Price"] = result
+        print(FFavg, pbefore, FFstart, pafter)
     
+    # Check if it is NOT a meeting month. If NOT a meeting month then TRUE, and the following statement should run.
+    if pd.isna(data.loc[(data['Date'] == date) & (data['START'] == 1), "% Days"].values):
+        raise("Meeting month error in call on FFend for " + date)
+    pass
+
+#FFER Start = [ (Avg FFER) - (% days after meet.)*(FFER End) ] / (% days before meet.)
+def FFstart(date, data):
+    # If it IS a meeting month, then the following should run
+    if (not(pd.isna(data.loc[(data['Date'] == date) & (data['END'] == 1), "% Days"].values))):
+        #Avg. FFER
+        FFavg = data.loc[(data['Date'] == date) & (data['AVERAGE'] == 1), "Price"].values
+        # %after
+        pafter = data.loc[(data['Date'] == date) & (data['END'] == 1), "% Days"].values
+        # FF end
+        FFend = data.loc[(data['Date'] == date) & (data['END'] == 1), "Price"].values
+        # %before
+        pbefore = data.loc[(data['Date'] == date) & (data['START'] == 1), "% Days"].values
+        #FFER Start = [ (Avg FFER) - (% days after meet.)*(FFER End) ] / (% days before meet.)
+        result = (FFavg - (pafter * FFend)) /  pbefore
+        data.loc[(data['Date'] == date) & (data['START'] == 1), "Price"] = result
+        print(FFavg, pbefore, FFstart, pafter)
+    
+    # Check if it is NOT a meeting month. If NOT a meeting month then TRUE, and the following statement should run.
+    if pd.isna(data.loc[(data['Date'] == date) & (data['END'] == 1), "% Days"].values):
+        raise("Meeting month error in call on FFstart for " + date)
+    pass
+    
+def polish(data):
+    data['Implied Rate'] = 100 - data['Price']
+    loop = data["Date"].values
+    for month in loop:
+        difference = data.loc[(data['Date'] == month) & (data['END'] == 1), "Implied Rate"].values[0] - data.loc[(data['Date'] == month) & (data['START'] == 1), "Implied Rate"].values[0]
+        data.loc[(data['Date'] == month) & (data['END'] == 1), "Monthly Change"] = difference
+    data['# of 25bp Hikes'] = data['Monthly Change'].apply(lambda x: (x/.25) if pd.notna(x) else np.nan)
+    data['# Hikes Breakdown'] = data['# of 25bp Hikes'].apply(lambda x: (int(x), x - int(x)) if pd.notna(x) else np.nan)
+
+    print(data)
+
+def Generate(data):
+    import numpy as np
+
+    # Define the number of rows and columns
+    rows, cols = 6, 10
+
+    # Create the array with zeros
+    array = np.zeros((rows, cols))
+
+    # Set the first row with incremented values starting from 0, increasing by 0.25
+    array[0] = np.arange(0, cols * 0.25, 0.25)
+
+    print(array)
+    
+
+
+
+
+    
+
 
 def main():
     """ Main entry point of the app """
     print("hello world")
-    calculate()
+    data = calculate()
+    BackFill(NearestNonMeetingMonth2(today).date(), data)
+    FrontFill(NearestNonMeetingMonth2(today).date(), data)
+    polish(data)
+    Generate(data)
 
 
 if __name__ == "__main__":
