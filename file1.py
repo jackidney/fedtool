@@ -331,7 +331,9 @@ def Generate(data):
     print(array)
     return array
         
-
+def cumulatives(array):
+    
+    pass
 
 
     
@@ -345,6 +347,7 @@ def main():
     FrontFill(NearestNonMeetingMonth2(today).date(), data)
     polish(data)
     hikeprobs = Generate(data)
+    cumulatives(hikeprobs)
 
 
 if __name__ == "__main__":
