@@ -6,4 +6,5 @@ I got a limited free trial subscription from a financial data vendor (barchart),
 The program seems to correctly calculate the market-implied probability of a fed cut using at the June meeting using the options data from that moment I downloaded it from the server midday (probability spreads vary somewhat intraday).
 
 To do: 
+
 -Make binary probabilities interpretable through a GUI (software currently prints to command line)
